@@ -24,15 +24,15 @@
 #define LOG_TAG "binder_demo"
 
 /* For relevant code see:
-    frameworks/base/{include,libs}/binder/{IInterface,Parcel}.h
-    frameworks/base/include/utils/{Errors,RefBase}.h
+    frameworks/native/{include,libs}/binder/{IInterface,Parcel}.{h,cpp}
+    system/core/include/utils/{Errors,RefBase}.h
  */
 
 #include <stdlib.h>
 
-#include "utils/RefBase.h"
-#include "utils/Log.h"
-#include "utils/TextOutput.h"
+#include <utils/RefBase.h>
+#include <utils/Log.h>
+#include <binder/TextOutput.h>
 
 #include <binder/IInterface.h>
 #include <binder/IBinder.h>
@@ -47,7 +47,7 @@ using namespace android;
     do { \
         printf(__VA_ARGS__); \
         printf("\n"); \
-        LOGD(__VA_ARGS__); \
+        ALOGD(__VA_ARGS__); \
     } while(0)
 
 void assert_fail(const char *file, int line, const char *func, const char *expr) {
@@ -96,7 +96,7 @@ class IDemo : public IInterface {
 class BpDemo : public BpInterface<IDemo> {
     public:
         BpDemo(const sp<IBinder>& impl) : BpInterface<IDemo>(impl) {
-            LOGD("BpDemo::BpDemo()");
+            ALOGD("BpDemo::BpDemo()");
         }
 
         virtual void push(int32_t push_data) {
@@ -112,7 +112,7 @@ class BpDemo : public BpInterface<IDemo> {
             aout << "BpDemo::push parcel reply:\n";
             reply.print(PLOG); endl(PLOG);
 
-            LOGD("BpDemo::push(%i)", push_data);
+            ALOGD("BpDemo::push(%i)", push_data);
         }
 
         virtual void alert() {
@@ -120,7 +120,7 @@ class BpDemo : public BpInterface<IDemo> {
             data.writeInterfaceToken(IDemo::getInterfaceDescriptor());
             data.writeString16(String16("The alert string"));
             remote()->transact(ALERT, data, &reply, IBinder::FLAG_ONEWAY);    // asynchronous call
-            LOGD("BpDemo::alert()");
+            ALOGD("BpDemo::alert()");
         }
 
         virtual int32_t add(int32_t v1, int32_t v2) {
@@ -131,12 +131,12 @@ class BpDemo : public BpInterface<IDemo> {
             aout << "BpDemo::add parcel to be sent:\n";
             data.print(PLOG); endl(PLOG);
             remote()->transact(ADD, data, &reply);
-            LOGD("BpDemo::add transact reply");
+            ALOGD("BpDemo::add transact reply");
             reply.print(PLOG); endl(PLOG);
 
             int32_t res;
             status_t status = reply.readInt32(&res);
-            LOGD("BpDemo::add(%i, %i) = %i (status: %i)", v1, v2, res, status);
+            ALOGD("BpDemo::add(%i, %i) = %i (status: %i)", v1, v2, res, status);
             return res;
         }
 };
@@ -157,8 +157,8 @@ class BpDemo : public BpInterface<IDemo> {
         }
         return intr;
     }
-    IDemo::IDemo() { LOGD("IDemo::IDemo()"); }
-    IDemo::~IDemo() { LOGD("IDemo::~IDemo()"); }
+    IDemo::IDemo() { ALOGD("IDemo::IDemo()"); }
+    IDemo::~IDemo() { ALOGD("IDemo::~IDemo()"); }
     // End of macro expansion
 
 // Server
@@ -167,7 +167,7 @@ class BnDemo : public BnInterface<IDemo> {
 };
 
 status_t BnDemo::onTransact(uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags) {
-    LOGD("BnDemo::onTransact(%i) %i", code, flags);
+    ALOGD("BnDemo::onTransact(%i) %i", code, flags);
     data.checkInterface(this);
     data.print(PLOG); endl(PLOG);
 
@@ -178,7 +178,7 @@ status_t BnDemo::onTransact(uint32_t code, const Parcel& data, Parcel* reply, ui
         } break;
         case PUSH: {
             int32_t inData = data.readInt32();
-            LOGD("BnDemo::onTransact got %i", inData);
+            ALOGD("BnDemo::onTransact got %i", inData);
             push(inData);
             ASSERT(reply != 0);
             reply->print(PLOG); endl(PLOG);
@@ -188,7 +188,7 @@ status_t BnDemo::onTransact(uint32_t code, const Parcel& data, Parcel* reply, ui
             int32_t inV1 = data.readInt32();
             int32_t inV2 = data.readInt32();
             int32_t sum = add(inV1, inV2);
-            LOGD("BnDemo::onTransact add(%i, %i) = %i", inV1, inV2, sum);
+            ALOGD("BnDemo::onTransact add(%i, %i) = %i", inV1, inV2, sum);
             ASSERT(reply != 0);
             reply->print(PLOG); endl(PLOG);
             reply->writeInt32(sum);
@@ -229,13 +229,13 @@ sp<IDemo> getDemoServ() {
 int main(int argc, char **argv) {
 
     if (argc == 1) {
-        LOGD("We're the service");
+        ALOGD("We're the service");
 
         defaultServiceManager()->addService(String16("Demo"), new Demo());
         android::ProcessState::self()->startThreadPool();
-        LOGD("Demo service is now ready");
+        ALOGD("Demo service is now ready");
         IPCThreadState::self()->joinThreadPool();
-        LOGD("Demo service thread joined");
+        ALOGD("Demo service thread joined");
     } else if (argc == 2) {
         INFO("We're the client: %s", argv[1]);
 
@@ -246,7 +246,7 @@ int main(int argc, char **argv) {
         demo->push(v);
         const int32_t adder = 5;
         int32_t sum = demo->add(v, adder);
-        LOGD("Addition result: %i + %i = %i", v, adder, sum);
+        ALOGD("Addition result: %i + %i = %i", v, adder, sum);
     }
 
     return 0;
